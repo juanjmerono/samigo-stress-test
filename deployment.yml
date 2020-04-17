@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadtest
+  labels:
+    jobgroup: loadtest
+spec:
+  # Remove job after completed 1 week
+  #ttlSecondsAfterFinished: 604800
+  template:
+    spec:
+      volumes:
+      - name: files
+        configMap:
+          name: files
+          items:
+          - key: script.js
+            path: script.js
+          - key: config.js
+            path: config.js
+          - key: users.js
+            path: users.js
+          - key: image.png
+            path: image.png
+          - key: text.txt
+            path: text.txt
+      containers:
+      - name: avloadtest
+        image: loadimpact/k6
+        workingDir: /mnt/k6
+        args: [ "run" , "script.js" ]
+        env:
+          - name: ROOT_USR
+            valueFrom:
+              secretKeyRef:
+                name: secret
+                key: root_user
+          - name: ROOT_PWD
+            valueFrom:
+              secretKeyRef:
+                name: secret
+                key: root_password
+        volumeMounts:
+          - name: files
+            mountPath: /mnt/k6
+            readOnly: true
+      restartPolicy: Never
+  backoffLimit: 1
+  # Una hora de límite para ejecutar el test
+  activeDeadlineSeconds: 3600
